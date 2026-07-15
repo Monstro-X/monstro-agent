@@ -37,18 +37,20 @@ export interface ScopedInstallationToken {
 /**
  * Tokens come from the Vercel Connect SDK's shared in-process cache, so a
  * near-expiry cached token could otherwise be handed to a long git operation
- * (clone/fetch/push) and die mid-flight. Guarantee at least this much
- * remaining lifetime on every mint.
+ * (clone/fetch/push) and die mid-flight. Connect GitHub installation tokens
+ * live ~15 minutes (verified against a live connector), so guarantee at
+ * least this much remaining lifetime on every mint.
  */
 const DEFAULT_VALIDITY_BUFFER_MS = 5 * 60_000;
 
 /**
  * Vercel Connect GitHub app-subject tokens act as the whole installation.
- * Whether `scopes` narrows per-permission is connector-beta-dependent;
- * `['*']` requests the default scopes for the subject. Repo/permission
- * narrowing can be turned on here (single seam) once verified — the trust
- * boundary is enforced by `verifyRepoAccess` (user permissions intersected
- * with installation coverage) either way.
+ * Verified against a live connector (SDK 0.3.3 beta): `scopes` and
+ * `resources` are accepted but do NOT narrow GitHub app tokens — the token
+ * always carries the connector's full granted permissions. These mapping
+ * seams stay so narrowing can be turned on here if Connect adds support;
+ * the trust boundary is enforced by `verifyRepoAccess` (user permissions
+ * intersected with installation coverage) either way.
  */
 function mapPermissionsToScopes(
   _permissions: GitHubInstallationTokenPermissions,
