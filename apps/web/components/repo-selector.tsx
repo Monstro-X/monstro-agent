@@ -119,7 +119,7 @@ export function RepoSelector({
             .safeParse(data);
           setError(parsed.success ? (parsed.data.error ?? "") : "");
           if (!parsed.success || !parsed.data.error) {
-            setError("Connect GitHub to access repositories");
+            setError("Shared GitHub access is unavailable");
           }
           return;
         }

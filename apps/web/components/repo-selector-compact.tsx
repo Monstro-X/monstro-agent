@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ExternalLink,
   LockIcon,
-  Plus,
   RefreshCw,
   SearchIcon,
 } from "lucide-react";
@@ -30,7 +29,6 @@ import {
 } from "@/hooks/use-installation-repos";
 import { useGitHubConnectionStatus } from "@/hooks/use-github-connection-status";
 import { useSession } from "@/hooks/use-session";
-import { buildGitHubReconnectUrl } from "@/lib/github/urls";
 import { cn } from "@/lib/utils";
 
 function GitHubIcon({ className }: { className?: string }) {
@@ -92,10 +90,6 @@ interface RepoSelectorCompactProps {
   onSelect: (owner: string, repo: string) => void;
 }
 
-function getCurrentPathWithSearch(): string {
-  return `${window.location.pathname}${window.location.search}`;
-}
-
 async function fetchInstallations(): Promise<Installation[]> {
   const response = await fetch("/api/github/installations");
   if (!response.ok) {
@@ -123,13 +117,9 @@ function SkeletonRow() {
 function GitHubActionCard({
   title,
   description,
-  buttonLabel,
-  onClick,
 }: {
   title: string;
   description: string;
-  buttonLabel: string;
-  onClick: () => void;
 }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-border/70 px-4 py-6 text-center dark:border-white/10">
@@ -138,13 +128,6 @@ function GitHubActionCard({
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <button
-        type="button"
-        onClick={onClick}
-        className="rounded-md bg-neutral-200 px-4 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-300"
-      >
-        {buttonLabel}
-      </button>
     </div>
   );
 }
@@ -165,17 +148,6 @@ export function RepoSelectorCompact({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const hasAutoSelectedRef = useRef(false);
-
-  const startGitHubInstall = useCallback(() => {
-    const params = new URLSearchParams({
-      next: getCurrentPathWithSearch(),
-    });
-    window.location.href = `/api/github/app/install?${params.toString()}`;
-  }, []);
-
-  const startGitHubReconnect = useCallback(() => {
-    window.location.href = buildGitHubReconnectUrl(getCurrentPathWithSearch());
-  }, []);
 
   const { data: installations = [], isLoading: installationsLoading } = useSWR<
     Installation[]
@@ -268,37 +240,15 @@ export function RepoSelectorCompact({
   const isInitialLoading = installationsLoading && installations.length === 0;
   const hasSelection = selectedOwner && selectedRepo;
 
-  // Not connected to GitHub
-  if (!sessionLoading && !hasGitHub) {
+  if (
+    (!sessionLoading && !hasGitHub) ||
+    reconnectRequired ||
+    (!installationsLoading && installations.length === 0)
+  ) {
     return (
       <GitHubActionCard
-        title="Install GitHub App"
-        description="Continue on GitHub to choose which repositories are available."
-        buttonLabel="Choose repositories"
-        onClick={startGitHubInstall}
-      />
-    );
-  }
-
-  if (reconnectRequired) {
-    return (
-      <GitHubActionCard
-        title="Reconnect GitHub"
-        description="Your saved GitHub connection is no longer valid. Reconnect to refresh repository access."
-        buttonLabel="Reconnect GitHub"
-        onClick={startGitHubReconnect}
-      />
-    );
-  }
-
-  // No installations
-  if (!installationsLoading && installations.length === 0) {
-    return (
-      <GitHubActionCard
-        title="Install GitHub App"
-        description="Install the GitHub App to choose which repositories are available."
-        buttonLabel="Choose repositories"
-        onClick={startGitHubInstall}
+        title="Repository access unavailable"
+        description="The shared GitHub App is not configured for this account. Contact an administrator."
       />
     );
   }
@@ -356,19 +306,6 @@ export function RepoSelectorCompact({
                       </CommandItem>
                     ))}
                   </CommandGroup>
-                  <div className="border-t border-border/70 p-1 dark:border-white/10">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        startGitHubInstall();
-                        setOwnerOpen(false);
-                      }}
-                      className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <Plus className="size-3.5" />
-                      Add GitHub account
-                    </button>
-                  </div>
                 </CommandList>
               </Command>
             </PopoverContent>
@@ -451,19 +388,6 @@ export function RepoSelectorCompact({
                     </CommandItem>
                   ))}
                 </CommandGroup>
-                <div className="border-t border-border/70 p-1 dark:border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      startGitHubInstall();
-                      setOwnerOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  >
-                    <Plus className="size-3.5" />
-                    Add GitHub account
-                  </button>
-                </div>
               </CommandList>
             </Command>
           </PopoverContent>

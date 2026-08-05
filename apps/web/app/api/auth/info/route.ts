@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
+import {
+  getInstallationsByUserId,
+  upsertInstallation,
+} from "@/lib/db/installations";
+import { getConfiguredGitHubInstallation } from "@/lib/github/app";
 import { hasGitHubAccount as checkGitHubLinked } from "@/lib/github/users";
-import { getInstallationsByUserId } from "@/lib/db/installations";
 import { isUserAdmin, userExists } from "@/lib/db/users";
 import { isManagedTemplateTrialUser } from "@/lib/managed-template-trial";
 import { getSessionFromReq } from "@/lib/session/server";
@@ -27,7 +31,24 @@ export async function GET(req: NextRequest) {
   if (!exists) {
     return Response.json(UNAUTHENTICATED);
   }
-  const hasGitHubInstallations = installations.length > 0;
+  let hasGitHubInstallations = installations.length > 0;
+  const configuredInstallation = getConfiguredGitHubInstallation();
+  if (
+    configuredInstallation &&
+    !installations.some(
+      ({ installationId }) =>
+        installationId === configuredInstallation.installationId,
+    )
+  ) {
+    await upsertInstallation({
+      userId: session.user.id,
+      ...configuredInstallation,
+      accountType: "Organization",
+      repositorySelection: "selected",
+    });
+    hasGitHubInstallations = true;
+  }
+
   const hasGitHub = hasGitHubAccount || hasGitHubInstallations;
 
   const data: SessionUserInfo = {

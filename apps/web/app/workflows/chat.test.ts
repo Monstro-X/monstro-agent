@@ -511,11 +511,11 @@ describe("runAgentWorkflow", () => {
 
   test("streams a user-visible message when workspace setup fails", async () => {
     spies.resolveChatSandboxRuntime.mockImplementationOnce(async () => {
-      throw new Error("Connect GitHub to access repositories");
+      throw new Error("Shared GitHub access is unavailable");
     });
 
     await expect(runAgentWorkflow(makeOptions())).rejects.toThrow(
-      "Connect GitHub to access repositories",
+      "Shared GitHub access is unavailable",
     );
 
     expect(writtenChunks).toEqual(
@@ -525,7 +525,8 @@ describe("runAgentWorkflow", () => {
         {
           type: "text-delta",
           id: "setup-error",
-          delta: "Connect GitHub to access this repository, then try again.",
+          delta:
+            "Shared GitHub access is unavailable. Contact an administrator, then try again.",
         },
         { type: "text-end", id: "setup-error" },
       ]),
@@ -538,7 +539,7 @@ describe("runAgentWorkflow", () => {
         parts: [
           {
             type: "text",
-            text: "Connect GitHub to access this repository, then try again.",
+            text: "Shared GitHub access is unavailable. Contact an administrator, then try again.",
           },
         ],
       }),

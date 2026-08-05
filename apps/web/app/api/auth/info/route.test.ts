@@ -16,6 +16,11 @@ let exists = true;
 let hasGitHubLinked = false;
 let installations: Array<{ installationId: number }> = [];
 let isAdmin = false;
+let configuredInstallation: {
+  installationId: number;
+  accountLogin: string;
+} | null = null;
+let upsertInstallationCalls: unknown[] = [];
 
 const originalNodeEnv = process.env.NODE_ENV;
 
@@ -39,6 +44,14 @@ mock.module("@/lib/github/users", () => ({
 
 mock.module("@/lib/db/installations", () => ({
   getInstallationsByUserId: async () => installations,
+  upsertInstallation: async (input: unknown) => {
+    upsertInstallationCalls.push(input);
+    return input;
+  },
+}));
+
+mock.module("@/lib/github/app", () => ({
+  getConfiguredGitHubInstallation: () => configuredInstallation,
 }));
 
 const routeModulePromise = import("./route");
@@ -69,6 +82,8 @@ describe("GET /api/auth/info", () => {
     hasGitHubLinked = false;
     installations = [];
     isAdmin = false;
+    configuredInstallation = null;
+    upsertInstallationCalls = [];
   });
 
   test("returns unauthenticated when there is no session", async () => {
@@ -124,6 +139,32 @@ describe("GET /api/auth/info", () => {
       hasGitHub: false,
       hasGitHubAccount: false,
       hasGitHubInstallations: false,
+    });
+  });
+
+  test("provisions shared GitHub access for an existing session", async () => {
+    configuredInstallation = {
+      installationId: 123,
+      accountLogin: "Monstro-X",
+    };
+    const { GET } = await routeModulePromise;
+
+    const response = await GET(createRequest());
+
+    expect(response.status).toBe(200);
+    expect(upsertInstallationCalls).toEqual([
+      {
+        userId: "user-1",
+        installationId: 123,
+        accountLogin: "Monstro-X",
+        accountType: "Organization",
+        repositorySelection: "selected",
+      },
+    ]);
+    expect(await response.json()).toMatchObject({
+      hasGitHub: true,
+      hasGitHubAccount: false,
+      hasGitHubInstallations: true,
     });
   });
 

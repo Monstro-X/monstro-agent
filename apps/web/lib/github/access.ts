@@ -142,13 +142,13 @@ export function getRepoAccessErrorMessage(
 ): string {
   switch (reason) {
     case "no_user_token":
-      return "Connect GitHub to access repositories";
+      return "Shared GitHub access is unavailable";
     case "user_no_access":
       return "You don't have access to this repository";
     case "user_no_write":
       return "You need write access to this repository to perform this action";
     case "no_installation":
-      return "GitHub App not installed for this organization. Install it from Settings > Connections.";
+      return "The shared GitHub App is not configured for this organization.";
     case "app_no_access":
       return "GitHub App doesn't have access to this repository. Ask an org admin to update the app's repository permissions.";
   }

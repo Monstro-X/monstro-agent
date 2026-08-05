@@ -292,10 +292,10 @@ function GitHubConnectionWarning({
   if (reconnectRequired) {
     return (
       <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
-        Your GitHub connection needs to be refreshed.{" "}
+        Shared GitHub access needs administrator attention.{" "}
         {/* oxlint-disable-next-line nextjs/no-html-link-for-pages */}
         <a href="/settings/connections" className="underline">
-          Reconnect
+          View status
         </a>
       </div>
     );
@@ -303,10 +303,10 @@ function GitHubConnectionWarning({
   if (status === "not_connected") {
     return (
       <div className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
-        Connect GitHub to push changes.{" "}
+        Shared GitHub access is unavailable.{" "}
         {/* oxlint-disable-next-line nextjs/no-html-link-for-pages */}
         <a href="/settings/connections" className="underline">
-          Go to settings
+          View status
         </a>
       </div>
     );

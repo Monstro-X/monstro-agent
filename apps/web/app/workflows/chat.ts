@@ -281,8 +281,8 @@ function getSetupErrorMessage(error: unknown): string {
     return "Workspace setup failed. Try again in a moment.";
   }
 
-  if (error.message.includes("Connect GitHub")) {
-    return "Connect GitHub to access this repository, then try again.";
+  if (error.message.includes("Shared GitHub access")) {
+    return "Shared GitHub access is unavailable. Contact an administrator, then try again.";
   }
 
   if (error.message === "Session is archived") {

@@ -1,6 +1,10 @@
 import { generateState } from "arctic";
 import { NextResponse, type NextRequest } from "next/server";
-import { getInstallationsByUserId } from "@/lib/db/installations";
+import {
+  getInstallationsByUserId,
+  upsertInstallation,
+} from "@/lib/db/installations";
+import { getConfiguredGitHubInstallation } from "@/lib/github/app";
 import { syncUserInstallations } from "@/lib/github/sync";
 import { getUserGitHubToken } from "@/lib/github/token";
 import {
@@ -51,6 +55,17 @@ export async function GET(req: NextRequest): Promise<Response> {
     const fallbackUrl = new URL(redirectTo, req.url);
     fallbackUrl.searchParams.set("github", "trial_blocked");
     return NextResponse.redirect(fallbackUrl);
+  }
+
+  const configuredInstallation = getConfiguredGitHubInstallation();
+  if (configuredInstallation) {
+    await upsertInstallation({
+      userId: session.user.id,
+      ...configuredInstallation,
+      accountType: "Organization",
+      repositorySelection: "selected",
+    });
+    return NextResponse.redirect(new URL(redirectTo, req.url));
   }
 
   const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;

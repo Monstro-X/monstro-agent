@@ -8,6 +8,11 @@ let authSession: {
 let hasLinkedGitHub = false;
 let installations: Array<{ installationId: number }> = [];
 
+let configuredInstallation: {
+  installationId: number;
+  accountLogin: string;
+} | null = null;
+let upsertInstallationCalls: unknown[] = [];
 mock.module("server-only", () => ({}));
 
 mock.module("arctic", () => ({
@@ -30,6 +35,14 @@ mock.module("@/lib/github/users", () => ({
 
 mock.module("@/lib/db/installations", () => ({
   getInstallationsByUserId: async () => installations,
+  upsertInstallation: async (input: unknown) => {
+    upsertInstallationCalls.push(input);
+    return input;
+  },
+}));
+
+mock.module("@/lib/github/app", () => ({
+  getConfiguredGitHubInstallation: () => configuredInstallation,
 }));
 
 mock.module("@/lib/github/sync", () => ({
@@ -63,6 +76,8 @@ describe("GET /api/github/app/install", () => {
     };
     hasLinkedGitHub = true;
     installations = [{ installationId: 1 }];
+    configuredInstallation = null;
+    upsertInstallationCalls = [];
 
     Object.assign(process.env, {
       NEXT_PUBLIC_GITHUB_APP_SLUG: "open-agents",
@@ -75,6 +90,32 @@ describe("GET /api/github/app/install", () => {
       NEXT_PUBLIC_GITHUB_APP_SLUG: originalEnv.NEXT_PUBLIC_GITHUB_APP_SLUG,
       NODE_ENV: originalEnv.NODE_ENV,
     });
+  });
+
+  test("grants configured shared access without editor GitHub OAuth", async () => {
+    hasLinkedGitHub = false;
+    installations = [];
+    configuredInstallation = {
+      installationId: 123,
+      accountLogin: "Monstro-X",
+    };
+    const { GET } = await routeModulePromise;
+
+    const response = await GET(
+      createRequest("http://localhost/api/github/app/install?next=/sessions"),
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("http://localhost/sessions");
+    expect(upsertInstallationCalls).toEqual([
+      {
+        userId: "user-1",
+        installationId: 123,
+        accountLogin: "Monstro-X",
+        accountType: "Organization",
+        repositorySelection: "selected",
+      },
+    ]);
   });
 
   test("redirects to get-started and preserves next when github not linked", async () => {
