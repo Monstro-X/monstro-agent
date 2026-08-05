@@ -7,7 +7,7 @@ type RateLimitOptions = {
   windowMs: number;
 };
 
-const DEFAULT_RATE_LIMIT_TIMEOUT_MS = 1000;
+const DEFAULT_RATE_LIMIT_TIMEOUT_MS = 5000;
 
 let sharedRedisClient: Redis | null | undefined;
 
@@ -58,7 +58,7 @@ function getSharedRedisClient(): Redis | null {
 
   sharedRedisClient = new Redis({
     ...(getRedisConnectionOptions(redisUrl) as RedisOptions),
-    connectTimeout: 500,
+    connectTimeout: getRateLimitTimeoutMs(),
     maxRetriesPerRequest: 1,
   });
   sharedRedisClient.on("error", (error) => {

@@ -138,6 +138,23 @@ describe("checkRateLimit", () => {
     expect(redisInstances[0]?.options.enableOfflineQueue).toBeUndefined();
   });
 
+  test("allows the connection timeout to be configured", async () => {
+    process.env.REDIS_URL = "redis://localhost:6379";
+    process.env.RATE_LIMIT_TIMEOUT_MS = "2500";
+    process.env[nodeEnvKey] = "production";
+    const { checkRateLimit } = await loadRateLimitModule();
+
+    await expect(
+      checkRateLimit({
+        key: `test:${crypto.randomUUID()}`,
+        limit: 2,
+        windowMs: 60_000,
+      }),
+    ).resolves.toBeNull();
+
+    expect(redisInstances[0]?.options.connectTimeout).toBe(2500);
+  });
+
   test("fails closed when the Redis expiry command fails", async () => {
     const originalConsoleError = console.error;
     console.error = mock(() => undefined) as unknown as typeof console.error;
