@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 let getAccessTokenResult: { accessToken?: string | null } | null;
 let getAccessTokenError: Error | null;
+let configuredInstallationId: number | null;
+let installationGranted: boolean;
+let configuredInstallationToken: string | null;
 
 const getAccessTokenSpy = mock(
   async (_input: { body: { providerId: string; userId: string } }) => {
@@ -30,11 +33,26 @@ mock.module("@/lib/auth/config", () => ({
 }));
 
 mock.module("@/lib/db/client", () => ({
-  db: {},
+  db: {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () =>
+            installationGranted && configuredInstallationId
+              ? [{ installationId: configuredInstallationId }]
+              : [],
+        }),
+      }),
+    }),
+  },
 }));
 
-mock.module("@/lib/db/schema", () => ({
-  accounts: {},
+mock.module("@/lib/github/app", () => ({
+  getConfiguredGitHubInstallation: () =>
+    configuredInstallationId
+      ? { installationId: configuredInstallationId, accountLogin: "monstro-x" }
+      : null,
+  getConfiguredInstallationToken: async () => configuredInstallationToken,
 }));
 
 const tokenModulePromise = import("./token");
@@ -44,6 +62,9 @@ describe("getUserGitHubToken", () => {
     getAccessTokenSpy.mockClear();
     getAccessTokenResult = { accessToken: "ghu_test" };
     getAccessTokenError = null;
+    configuredInstallationId = null;
+    installationGranted = false;
+    configuredInstallationToken = null;
   });
 
   test("looks up access tokens by user id without request headers", async () => {
@@ -65,6 +86,16 @@ describe("getUserGitHubToken", () => {
     const token = await getUserGitHubToken("user-1");
 
     expect(token).toBeNull();
+  });
+
+  test("falls back to the configured GitHub App installation", async () => {
+    getAccessTokenError = new Error("Account not found");
+    configuredInstallationId = 123;
+    installationGranted = true;
+    configuredInstallationToken = "ghs_service";
+    const { getUserGitHubToken } = await tokenModulePromise;
+
+    expect(await getUserGitHubToken("user-1")).toBe("ghs_service");
   });
 });
 

@@ -7,6 +7,15 @@ interface GitHubAppConfig {
   privateKey: string;
 }
 
+export interface ConfiguredGitHubInstallation {
+  installationId: number;
+  accountLogin: string;
+}
+
+let configuredInstallationToken:
+  | { token: string; expiresAt: number }
+  | undefined;
+
 export type GitHubInstallationPermissionValue = "read" | "write";
 
 export type GitHubInstallationTokenPermissions = Partial<
@@ -74,6 +83,43 @@ export function isGitHubAppConfigured(): boolean {
   return Boolean(
     process.env.GITHUB_APP_ID && process.env.GITHUB_APP_PRIVATE_KEY,
   );
+}
+
+export function getConfiguredGitHubInstallation(): ConfiguredGitHubInstallation | null {
+  const installationId = Number.parseInt(
+    process.env.GITHUB_APP_INSTALLATION_ID ?? "",
+    10,
+  );
+  const accountLogin = process.env.GITHUB_APP_ACCOUNT_LOGIN?.trim();
+
+  return Number.isInteger(installationId) && installationId > 0 && accountLogin
+    ? { installationId, accountLogin }
+    : null;
+}
+
+export async function getConfiguredInstallationToken(): Promise<string | null> {
+  const configured = getConfiguredGitHubInstallation();
+  if (!configured) return null;
+
+  if (
+    configuredInstallationToken &&
+    configuredInstallationToken.expiresAt > Date.now() + 60_000
+  ) {
+    return configuredInstallationToken.token;
+  }
+
+  const { appId, privateKey } = getGitHubAppConfig();
+  const auth = createAppAuth({ appId, privateKey });
+  const result = await auth({
+    type: "installation",
+    installationId: configured.installationId,
+  });
+
+  configuredInstallationToken = {
+    token: result.token,
+    expiresAt: Date.parse(result.expiresAt),
+  };
+  return result.token;
 }
 
 async function getAppJwt(): Promise<string> {

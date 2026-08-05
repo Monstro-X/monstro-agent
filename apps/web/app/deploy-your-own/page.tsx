@@ -6,15 +6,13 @@ const DEPLOY_ENV_VARS = [
   "POSTGRES_URL",
   "BETTER_AUTH_SECRET",
   "BETTER_AUTH_URL",
-  "ENCRYPTION_KEY",
-  "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID",
-  "VERCEL_APP_CLIENT_SECRET",
-  "NEXT_PUBLIC_GITHUB_CLIENT_ID",
-  "GITHUB_CLIENT_SECRET",
+  "MONSTRO_AUTH_URL",
+  "MONSTRO_AGENT_SSO_SECRET",
+  "VERCEL_ACCESS_TOKEN",
   "GITHUB_APP_ID",
   "GITHUB_APP_PRIVATE_KEY",
-  "NEXT_PUBLIC_GITHUB_APP_SLUG",
-  "GITHUB_WEBHOOK_SECRET",
+  "GITHUB_APP_INSTALLATION_ID",
+  "GITHUB_APP_ACCOUNT_LOGIN",
 ] as const;
 
 const DEPLOY_PRODUCTS = [
@@ -34,19 +32,15 @@ const DEPLOY_PRODUCTS = [
 
 const DEPLOY_TEMPLATE_URL = (() => {
   const params = new URLSearchParams([
-    ["project-name", "open-agents"],
-    ["repository-name", "open-agents"],
-    ["repository-url", "https://github.com/vercel-labs/open-agents"],
-    ["demo-title", "Open Agents"],
-    [
-      "demo-description",
-      "Open-source reference app for building and running background coding agents on Vercel.",
-    ],
-    ["demo-url", "https://open-agents.dev/"],
+    ["project-name", "monstro-agent"],
+    ["repository-name", "monstro-agent"],
+    ["repository-url", "https://github.com/Monstro-X/monstro-agent"],
+    ["demo-title", "Monstro Agent"],
+    ["demo-description", "Monstro's hosted background coding agent."],
     ["env", DEPLOY_ENV_VARS.join(",")],
     [
       "envDescription",
-      "Neon can provide POSTGRES_URL automatically. Generate BETTER_AUTH_SECRET and ENCRYPTION_KEY yourself, then add your Vercel OAuth and GitHub App credentials for a full deployment.",
+      "Neon can provide POSTGRES_URL automatically. Generate BETTER_AUTH_SECRET and MONSTRO_AGENT_SSO_SECRET yourself, then add the Monstro Admin URL, billing-owner Vercel token, and shared GitHub App installation.",
     ],
     ["products", encodeURIComponent(JSON.stringify(DEPLOY_PRODUCTS))],
     ["skippable-integrations", "1"],

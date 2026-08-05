@@ -5,9 +5,14 @@
       "dependsOn": ["^build"],
       "env": [
         "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
         "BLOB_READ_WRITE_TOKEN",
-        "ENCRYPTION_KEY",
         "GITHUB_CLIENT_SECRET",
+        "GITHUB_APP_ACCOUNT_LOGIN",
+        "GITHUB_APP_ID",
+        "GITHUB_APP_INSTALLATION_ID",
+        "GITHUB_APP_PRIVATE_KEY",
+        "GITHUB_WEBHOOK_SECRET",
         "JWE_SECRET",
         "KV_REST_API_READ_ONLY_TOKEN",
         "KV_REST_API_TOKEN",
@@ -15,10 +20,12 @@
         "KV_URL",
         "NEXT_PUBLIC_AUTH_PROVIDERS",
         "NEXT_PUBLIC_GITHUB_CLIENT_ID",
-        "NEXT_PUBLIC_VERCEL_APP_CLIENT_ID",
+        "NEXT_PUBLIC_GITHUB_APP_SLUG",
+        "MONSTRO_AGENT_SSO_SECRET",
+        "MONSTRO_AUTH_URL",
         "POSTGRES_URL",
         "REDIS_URL",
-        "VERCEL_APP_CLIENT_SECRET"
+        "VERCEL_ACCESS_TOKEN"
       ],
       "outputs": ["dist/**"]
     },

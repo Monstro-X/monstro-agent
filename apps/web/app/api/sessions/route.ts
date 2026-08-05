@@ -32,7 +32,7 @@ import {
   isVercelInvalidTokenError,
   listMatchingVercelProjects,
 } from "@/lib/vercel/projects";
-import { getUserVercelToken } from "@/lib/vercel/token";
+import { getVercelAccessToken } from "@/lib/vercel/token";
 import {
   vercelProjectSelectionSchema,
   type VercelProjectSelection,
@@ -319,11 +319,11 @@ export async function POST(req: Request) {
     const hasRepo = Boolean(repoOwner && repoName);
     if (hasRepo && repoOwner && repoName) {
       if (explicitVercelProject) {
-        const vercelToken = await getUserVercelToken(session.user.id);
+        const vercelToken = getVercelAccessToken();
         if (!vercelToken) {
           return Response.json(
-            { error: "Connect Vercel to select a Vercel project" },
-            { status: 403 },
+            { error: "Vercel service token is not configured" },
+            { status: 503 },
           );
         }
 

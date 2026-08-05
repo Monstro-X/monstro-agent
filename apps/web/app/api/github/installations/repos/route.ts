@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getInstallationByUserAndId } from "@/lib/db/installations";
 import { listUserInstallationRepositories } from "@/lib/github/repos";
+import {
+  getConfiguredGitHubInstallation,
+  getConfiguredInstallationToken,
+} from "@/lib/github/app";
 import { getUserGitHubToken } from "@/lib/github/token";
 import { getServerSession } from "@/lib/session/get-server-session";
 
@@ -54,7 +58,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const userToken = await getUserGitHubToken(session.user.id);
+  const configuredInstallation = getConfiguredGitHubInstallation();
+  const serviceInstallation =
+    configuredInstallation?.installationId === installationId;
+  const userToken = serviceInstallation
+    ? await getConfiguredInstallationToken()
+    : await getUserGitHubToken(session.user.id);
   if (!userToken) {
     return NextResponse.json(
       { error: "GitHub not connected" },
@@ -66,11 +75,11 @@ export async function GET(request: NextRequest) {
     const repos = await listUserInstallationRepositories({
       installationId,
       userToken,
+      serviceInstallation,
       owner: installation.accountLogin,
       query,
       limit,
     });
-
     return NextResponse.json(repos);
   } catch (error) {
     console.error("Failed to fetch installation repositories:", error);

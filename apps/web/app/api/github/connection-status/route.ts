@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getInstallationsByUserId } from "@/lib/db/installations";
+import { getConfiguredGitHubInstallation } from "@/lib/github/app";
 import type { GitHubConnectionStatusResponse } from "@/lib/github/status";
 import {
   isGitHubInstallationsAuthError,
@@ -20,6 +21,22 @@ export async function GET() {
     hasGitHubAccount(session.user.id),
     getInstallationsByUserId(session.user.id),
   ]);
+
+  const configuredInstallation = getConfiguredGitHubInstallation();
+  if (
+    configuredInstallation &&
+    installations.some(
+      ({ installationId }) =>
+        installationId === configuredInstallation.installationId,
+    )
+  ) {
+    return NextResponse.json({
+      status: "connected",
+      reason: null,
+      hasInstallations: true,
+      syncedInstallationsCount: installations.length,
+    } satisfies GitHubConnectionStatusResponse);
+  }
 
   if (!linked) {
     return NextResponse.json({

@@ -12,9 +12,9 @@ This file provides guidance for AI coding agents working in this repository.
 
 ## Authentication
 
-Authentication uses [Better Auth](https://www.better-auth.com/) with Vercel OAuth (sign-in) and GitHub OAuth (repo access). Config lives in `apps/web/lib/auth/config.ts`. Sessions are managed by better-auth's built-in session system — there is no manual JWE/encryption layer.
+Authentication uses a short-lived, one-time session handoff from Monstro Admin. The Agent creates its own Better Auth session after the authenticated Admin backchannel provisions the code. Each authenticated editor receives the configured shared GitHub App installation; repository operations use short-lived GitHub App installation tokens.
 
-Key env vars: `BETTER_AUTH_SECRET` (session signing), `NEXT_PUBLIC_VERCEL_APP_CLIENT_ID` + `VERCEL_APP_CLIENT_SECRET` (Vercel OAuth), plus GitHub App credentials for repo access. See `apps/web/.env.example` for the full list.
+Key env vars: `BETTER_AUTH_SECRET`, `MONSTRO_AUTH_URL`, the shared `MONSTRO_AGENT_SSO_SECRET`, the billing owner's server-only `VERCEL_ACCESS_TOKEN`, and the GitHub App ID, private key, installation ID, and account login. See `apps/web/.env.example` for the full list.
 
 ## Database & Migrations
 

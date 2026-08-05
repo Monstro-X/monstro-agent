@@ -14,7 +14,7 @@ mock.module("@/lib/session/get-server-session", () => ({
 }));
 
 mock.module("@/lib/vercel/token", () => ({
-  getUserVercelToken: async () => currentToken,
+  getVercelAccessToken: () => currentToken,
 }));
 
 mock.module("@/lib/db/vercel-project-links", () => ({
@@ -102,7 +102,7 @@ describe("/api/vercel/repo-projects", () => {
     expect(body.selectedProjectId).toBe("project-1");
   });
 
-  test("asks the client to reconnect Vercel when the token is invalid", async () => {
+  test("reports an invalid Vercel service token", async () => {
     const { GET } = await routeModulePromise;
 
     projectsError = new Error("invalid Vercel token");
@@ -114,7 +114,7 @@ describe("/api/vercel/repo-projects", () => {
     );
     const body = (await response.json()) as { error?: string };
 
-    expect(response.status).toBe(403);
-    expect(body.error).toBe("Reconnect Vercel to load matching projects");
+    expect(response.status).toBe(503);
+    expect(body.error).toBe("Vercel service token is invalid");
   });
 });

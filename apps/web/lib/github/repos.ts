@@ -34,6 +34,7 @@ export interface InstallationRepository {
 interface ListUserInstallationRepositoriesOptions {
   installationId: number;
   userToken: string;
+  serviceInstallation?: boolean;
   owner?: string;
   query?: string;
   limit?: number;
@@ -75,6 +76,7 @@ function compareRepositoriesByRecentActivity(
 export async function listUserInstallationRepositories({
   installationId,
   userToken,
+  serviceInstallation = false,
   owner,
   query,
   limit,
@@ -89,7 +91,9 @@ export async function listUserInstallationRepositories({
 
   for (let page = 1; page <= maxPages; page++) {
     const endpoint = new URL(
-      `https://api.github.com/user/installations/${installationId}/repositories`,
+      serviceInstallation
+        ? "https://api.github.com/installation/repositories"
+        : `https://api.github.com/user/installations/${installationId}/repositories`,
     );
     endpoint.searchParams.set("per_page", `${perPage}`);
     endpoint.searchParams.set("page", `${page}`);

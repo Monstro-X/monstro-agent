@@ -60,7 +60,7 @@ mock.module("@/lib/db/vercel-project-links", () => ({
 }));
 
 mock.module("@/lib/vercel/token", () => ({
-  getUserVercelToken: async () => currentVercelToken,
+  getVercelAccessToken: () => currentVercelToken,
 }));
 
 mock.module("@/lib/vercel/projects", () => ({

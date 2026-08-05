@@ -130,4 +130,23 @@ describe("installation-repos", () => {
     expect(repos.map((repo) => repo.name)).toEqual(["docs-site", "docs"]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  test("uses the installation endpoint for shared app access", async () => {
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+      const url = new URL(input.toString());
+      expect(url.pathname).toBe("/installation/repositories");
+      return Response.json({
+        repositories: [createRepository("site", "2024-01-01T00:00:00Z")],
+      });
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const repos = await listUserInstallationRepositories({
+      installationId: 123,
+      userToken: "ghs_service",
+      serviceInstallation: true,
+    });
+
+    expect(repos.map((repo) => repo.name)).toEqual(["site"]);
+  });
 });

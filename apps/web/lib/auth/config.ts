@@ -1,9 +1,8 @@
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import type {
-  GithubProfile,
-  VercelProfile,
-} from "better-auth/social-providers";
+import { createAuthMiddleware } from "better-auth/api";
+import { monstroSso } from "@/lib/auth/monstro-sso";
+import type { GithubProfile } from "better-auth/social-providers";
 import { nanoid } from "nanoid";
 import { deriveAuthUsername } from "@/lib/auth/username";
 import { db } from "@/lib/db/client";
@@ -70,17 +69,6 @@ function getAllowedAuthHosts(): string[] {
   return [...hosts];
 }
 
-function mapVercelProfileToUser(profile: VercelProfile): { username: string } {
-  return {
-    username: deriveAuthUsername({
-      id: profile.sub,
-      preferred_username: profile.preferred_username,
-      email: profile.email,
-      name: profile.name,
-    }),
-  };
-}
-
 function mapGitHubProfileToUser(profile: GithubProfile): { username: string } {
   return {
     username: deriveAuthUsername({
@@ -94,6 +82,8 @@ function mapGitHubProfileToUser(profile: GithubProfile): { username: string } {
 
 const authBaseURLFallback = getAuthBaseURLFallback();
 const authAllowedHosts = getAllowedAuthHosts();
+const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
+const githubClientSecret = process.env.GITHUB_CLIENT_SECRET;
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
@@ -119,6 +109,12 @@ export const auth = betterAuth({
     },
     additionalFields: {
       username: { type: "string", required: true },
+      isAdmin: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
       lastLoginAt: { type: "date", required: false },
     },
   },
@@ -143,24 +139,32 @@ export const auth = betterAuth({
     encryptOAuthTokens: true,
     accountLinking: {
       enabled: true,
-      trustedProviders: ["vercel", "github"],
-      allowDifferentEmails: true,
+      trustedProviders: ["monstro", "github"],
+      allowDifferentEmails: false,
     },
   },
 
-  socialProviders: {
-    vercel: {
-      clientId: process.env.NEXT_PUBLIC_VERCEL_APP_CLIENT_ID ?? "",
-      clientSecret: process.env.VERCEL_APP_CLIENT_SECRET ?? "",
-      scope: ["openid", "email", "profile", "offline_access"],
-      overrideUserInfoOnSignIn: true,
-      mapProfileToUser: mapVercelProfileToUser,
-    },
-    github: {
-      clientId: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
-      mapProfileToUser: mapGitHubProfileToUser,
-    },
+  socialProviders:
+    githubClientId && githubClientSecret
+      ? {
+          github: {
+            clientId: githubClientId,
+            clientSecret: githubClientSecret,
+            mapProfileToUser: mapGitHubProfileToUser,
+          },
+        }
+      : {},
+
+  plugins: [monstroSso()],
+
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/sign-in/social") {
+        throw new APIError("FORBIDDEN", {
+          message: "Sign in through Monstro Admin",
+        });
+      }
+    }),
   },
 
   advanced: {

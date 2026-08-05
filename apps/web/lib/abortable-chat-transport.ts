@@ -22,7 +22,7 @@ function mergeHeaders(...headerInits: Array<HeadersInit | undefined>) {
   for (const headerInit of headerInits) {
     if (!headerInit) continue;
 
-    new Headers(headerInit).forEach((value, key) => {
+    new Headers(headerInit).forEach((value: string, key: string) => {
       headers.set(key, value);
     });
   }

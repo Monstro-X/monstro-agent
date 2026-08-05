@@ -1,6 +1,5 @@
 # Open Agents
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?project-name=open-agents&repository-name=open-agents&repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fopen-agents&demo-title=Open+Agents&demo-description=Open-source+reference+app+for+building+and+running+background+coding+agents+on+Vercel.&demo-url=https%3A%2F%2Fopen-agents.dev%2F&env=POSTGRES_URL%2CBETTER_AUTH_SECRET%2CNEXT_PUBLIC_VERCEL_APP_CLIENT_ID%2CVERCEL_APP_CLIENT_SECRET%2CNEXT_PUBLIC_GITHUB_CLIENT_ID%2CGITHUB_CLIENT_SECRET%2CGITHUB_APP_ID%2CGITHUB_APP_PRIVATE_KEY%2CNEXT_PUBLIC_GITHUB_APP_SLUG%2CGITHUB_WEBHOOK_SECRET&envDescription=Neon+can+provide+POSTGRES_URL+automatically.+Generate+BETTER_AUTH_SECRET+yourself%2C+then+add+your+Vercel+OAuth+and+GitHub+App+credentials+for+a+full+deployment.&products=%255B%257B%2522type%2522%253A%2522integration%2522%252C%2522protocol%2522%253A%2522storage%2522%252C%2522productSlug%2522%253A%2522neon%2522%252C%2522integrationSlug%2522%253A%2522neon%2522%257D%252C%257B%2522type%2522%253A%2522integration%2522%252C%2522protocol%2522%253A%2522storage%2522%252C%2522productSlug%2522%253A%2522upstash-kv%2522%252C%2522integrationSlug%2522%253A%2522upstash%2522%257D%255D&skippable-integrations=1)
 
 Open Agents is an open-source reference app for building and running background coding agents on Vercel. It includes the web UI, the agent runtime, sandbox orchestration, and the GitHub integration needed to go from prompt to code changes without keeping your laptop involved.
 
@@ -60,22 +59,22 @@ POSTGRES_URL=
 BETTER_AUTH_SECRET=
 ```
 
-### Required for sign-in (Vercel OAuth)
+### Required for Monstro Admin sign-in and Vercel access
 
 ```env
-NEXT_PUBLIC_VERCEL_APP_CLIENT_ID=
-VERCEL_APP_CLIENT_SECRET=
+BETTER_AUTH_URL=https://agent.example.com
+MONSTRO_AUTH_URL=https://admin.example.com
+MONSTRO_AGENT_SSO_SECRET=
+VERCEL_ACCESS_TOKEN=
 ```
 
 ### Required for GitHub repo access, pushes, and PRs
 
 ```env
-NEXT_PUBLIC_GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
 GITHUB_APP_ID=
 GITHUB_APP_PRIVATE_KEY=
-NEXT_PUBLIC_GITHUB_APP_SLUG=
-GITHUB_WEBHOOK_SECRET=
+GITHUB_APP_INSTALLATION_ID=
+GITHUB_APP_ACCOUNT_LOGIN=
 ```
 
 ### Optional
@@ -88,6 +87,10 @@ VERCEL_PROJECT_PRODUCTION_URL=
 NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL=
 VERCEL_SANDBOX_BASE_SNAPSHOT_ID=
 ELEVENLABS_API_KEY=
+NEXT_PUBLIC_GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+NEXT_PUBLIC_GITHUB_APP_SLUG=
+GITHUB_WEBHOOK_SECRET=
 ```
 
 - `REDIS_URL` / `KV_URL`: optional skills metadata cache (falls back to in-memory when not configured).
@@ -114,31 +117,34 @@ ELEVENLABS_API_KEY=
    ```
 
 5. Deploy once to get a stable production URL.
-6. Create a Vercel OAuth app with callback URL:
-
-   ```text
-   https://YOUR_DOMAIN/api/auth/callback/vercel
-   ```
-
-7. Add these env vars and redeploy:
+6. Configure the Agent deployment:
 
    ```env
-   NEXT_PUBLIC_VERCEL_APP_CLIENT_ID=
-   VERCEL_APP_CLIENT_SECRET=
+   BETTER_AUTH_URL=https://YOUR_AGENT_DOMAIN
+   MONSTRO_AUTH_URL=https://YOUR_ADMIN_DOMAIN
+   MONSTRO_AGENT_SSO_SECRET=              # same random value in both apps
+   VERCEL_ACCESS_TOKEN=                   # billing owner's server-side token
    ```
 
-8. If you want the full GitHub-enabled coding-agent flow, create a GitHub App using:
+7. Configure the Admin deployment:
 
-   - Homepage URL: `https://YOUR_DOMAIN`
-   - Callback URL: `https://YOUR_DOMAIN/api/auth/callback/github`
-   - Setup URL: `https://YOUR_DOMAIN/api/github/app/callback`
+   ```env
+   MONSTRO_AGENT_URL=https://YOUR_AGENT_DOMAIN
+   MONSTRO_AGENT_SSO_SECRET=              # same value as the Agent deployment
+   ```
 
-   In the GitHub App settings:
-   - use the GitHub App's Client ID and Client Secret for `NEXT_PUBLIC_GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
-   - make the app public if you want org installs to work cleanly
-
-9. Add the GitHub App env vars and redeploy.
-10. Optionally add Redis/KV, `OPEN_AGENTS_RESOURCE_PROFILE=hobby` for Hobby-compatible resource defaults, the canonical production URL vars, and your own `VERCEL_SANDBOX_BASE_SNAPSHOT_ID` if you want fresh sandboxes to start from a preconfigured image.
+8. Create a GitHub App with repository permissions:
+   - Contents: read and write
+   - Pull requests: read and write
+9. Install the app on the Monstro GitHub organization and select only the
+   repositories editors may access.
+10. Add `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`,
+    `GITHUB_APP_INSTALLATION_ID` (the number in the installation settings
+    URL), and `GITHUB_APP_ACCOUNT_LOGIN` (the organization login), then
+    redeploy.
+11. Optionally configure the GitHub App webhook and account-linking variables,
+    Redis/KV, `OPEN_AGENTS_RESOURCE_PROFILE=hobby`, canonical production URL
+    vars, and `VERCEL_SANDBOX_BASE_SNAPSHOT_ID`.
 
 ## Local setup
 
@@ -164,56 +170,59 @@ ELEVENLABS_API_KEY=
 
 If you already have a linked Vercel project, you can pull env vars locally with `vc env pull`.
 
-## OAuth and integration setup
+## Authentication and integration setup
 
-### Vercel OAuth
+### Monstro Admin session handoff
 
-Authentication is handled by [Better Auth](https://www.better-auth.com/) with Vercel and GitHub as social providers. All auth routes are served from the `/api/auth/[...all]` catchall.
+Editors sign in with their existing Monstro Admin account. Admin sends the
+Agent a server-to-server, 60-second one-time code; the Agent consumes it and
+creates its own Better Auth session. No editor Vercel or GitHub account is
+required.
 
-Create a Vercel OAuth app and use this callback:
-
-```text
-https://YOUR_DOMAIN/api/auth/callback/vercel
-```
-
-For local development, use:
-
-```text
-http://localhost:3000/api/auth/callback/vercel
-```
-
-Then set:
+Agent deployment:
 
 ```env
-NEXT_PUBLIC_VERCEL_APP_CLIENT_ID=...
-VERCEL_APP_CLIENT_SECRET=...
+MONSTRO_AUTH_URL=https://YOUR_ADMIN_DOMAIN
+MONSTRO_AGENT_SSO_SECRET=...
+VERCEL_ACCESS_TOKEN=... # billing owner's server-side token
+```
+
+Admin deployment:
+
+```env
+MONSTRO_AGENT_URL=https://YOUR_AGENT_DOMAIN
+MONSTRO_AGENT_SSO_SECRET=... # exactly the same value
 ```
 
 ### GitHub App
 
-You do not need a separate GitHub OAuth app. Open Agents uses the GitHub App's OAuth credentials as a Better Auth social provider, plus the App's installation tokens for repo access.
+Create one GitHub App owned by Monstro, grant it **Contents** and **Pull
+requests** read/write permissions, and install it only on the repositories
+editors may access. Copy the installation ID from its settings URL:
 
-Create a GitHub App for installation-based repo access and configure:
-
-- Homepage URL: `https://YOUR_DOMAIN`
-- Callback URL: `https://YOUR_DOMAIN/api/auth/callback/github`
-- Setup URL: `https://YOUR_DOMAIN/api/github/app/callback`
-- make the app public if you want org installs to work cleanly
-
-For local development, use `http://localhost:3000` as the homepage URL, `http://localhost:3000/api/auth/callback/github` as the callback URL, and `http://localhost:3000/api/github/app/callback` as the setup URL.
+```text
+https://github.com/settings/installations/INSTALLATION_ID
+```
 
 Then set:
 
 ```env
-NEXT_PUBLIC_GITHUB_CLIENT_ID=...   # GitHub App Client ID
-GITHUB_CLIENT_SECRET=...           # GitHub App Client Secret
 GITHUB_APP_ID=...
 GITHUB_APP_PRIVATE_KEY=...
-NEXT_PUBLIC_GITHUB_APP_SLUG=...
-GITHUB_WEBHOOK_SECRET=...
+GITHUB_APP_INSTALLATION_ID=...
+GITHUB_APP_ACCOUNT_LOGIN=Monstro-X
 ```
 
-`GITHUB_APP_PRIVATE_KEY` can be stored as the PEM contents with escaped newlines or as a base64-encoded PEM.
+Every Monstro-authenticated editor receives access to that shared installation.
+GitHub operations use short-lived installation tokens; commit and merge paths
+further scope tokens to one repository.
+`GITHUB_APP_PRIVATE_KEY` accepts PEM contents with escaped newlines or a
+base64-encoded PEM.
+
+GitHub OAuth is not required. Configure `NEXT_PUBLIC_GITHUB_CLIENT_ID`,
+`GITHUB_CLIENT_SECRET`, and `NEXT_PUBLIC_GITHUB_APP_SLUG` only if editors should
+also link personal GitHub accounts. Configure `GITHUB_WEBHOOK_SECRET` only when
+using the optional installation webhook.
 
 ## Useful commands
 

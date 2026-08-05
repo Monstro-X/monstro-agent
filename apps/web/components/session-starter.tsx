@@ -85,8 +85,7 @@ export function SessionStarter({
     !githubConnectionLoading &&
     !reconnectRequired &&
     !!selectedOwner &&
-    !!selectedRepo &&
-    session?.authProvider === "vercel";
+    !!selectedRepo;
   const {
     data: repoProjects,
     loading: repoProjectsLoading,
@@ -185,8 +184,7 @@ export function SessionStarter({
     !githubConnectionLoading &&
     !reconnectRequired &&
     !!selectedOwner &&
-    !!selectedRepo &&
-    (sessionLoading || session?.authProvider === "vercel");
+    !!selectedRepo;
 
   const handleSubmit = () => {
     if (isSubmitDisabled) return;

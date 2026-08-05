@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useSession } from "@/hooks/use-session";
-import {
-  revokeAllGitHubTokens,
-  revokeAllVercelTokens,
-} from "@/lib/admin/actions";
+import { revokeAllGitHubTokens } from "@/lib/admin/actions";
 
 function NotFoundState() {
   return (
@@ -31,9 +28,7 @@ function NotFoundState() {
 }
 
 function AdminPageContent() {
-  const [revokeTarget, setRevokeTarget] = useState<"github" | "vercel" | null>(
-    null,
-  );
+  const [revokeTarget, setRevokeTarget] = useState<"github" | null>(null);
   const [isRevoking, setIsRevoking] = useState(false);
 
   async function handleRevoke() {
@@ -41,28 +36,13 @@ function AdminPageContent() {
     setIsRevoking(true);
 
     try {
-      if (revokeTarget === "github") {
-        const result = await revokeAllGitHubTokens();
-        if (result.success) {
-          toast.success("All GitHub tokens revoked", {
-            description: `Revoked ${result.revokedTokens ?? 0} tokens at GitHub, deleted ${result.deletedAccounts ?? 0} account links and ${result.deletedInstallations ?? 0} installations.`,
-          });
-        } else {
-          toast.error(result.error ?? "Failed to revoke tokens");
-        }
+      const result = await revokeAllGitHubTokens();
+      if (result.success) {
+        toast.success("All GitHub tokens revoked", {
+          description: `Revoked ${result.revokedTokens ?? 0} tokens at GitHub, deleted ${result.deletedAccounts ?? 0} account links and ${result.deletedInstallations ?? 0} installations.`,
+        });
       } else {
-        const result = await revokeAllVercelTokens();
-        if (result.success) {
-          toast.success("All Vercel tokens revoked", {
-            description: `Revoked ${result.revokedTokens ?? 0} tokens at Vercel, deleted ${result.deletedAccounts ?? 0} account links and ${result.deletedSessions ?? 0} sessions.`,
-          });
-          // Sessions are now invalid — redirect to force re-login
-          setTimeout(() => {
-            window.location.href = "/";
-          }, 1500);
-        } else {
-          toast.error(result.error ?? "Failed to revoke tokens");
-        }
+        toast.error(result.error ?? "Failed to revoke tokens");
       }
     } catch {
       toast.error("An unexpected error occurred");
@@ -87,21 +67,6 @@ function AdminPageContent() {
         </div>
 
         <div className="divide-y divide-red-500/20">
-          {/* Revoke Vercel tokens */}
-          <div className="flex items-center justify-between gap-4 px-5 py-4">
-            <p className="text-sm text-red-400/80">
-              Invalidate all user sessions by revoking all Vercel tokens.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-              onClick={() => setRevokeTarget("vercel")}
-            >
-              Revoke
-            </Button>
-          </div>
-
           {/* Revoke GitHub tokens */}
           <div className="flex items-center justify-between gap-4 px-5 py-4">
             <p className="text-sm text-red-400/80">
@@ -131,22 +96,14 @@ function AdminPageContent() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShieldAlert className="size-5 text-red-400" />
-              Revoke all {revokeTarget === "github" ? "GitHub" : "Vercel"}{" "}
-              tokens?
+              Revoke all GitHub tokens?
             </DialogTitle>
             <DialogDescription className="space-y-3">
               <span className="block">
-                {revokeTarget === "github"
-                  ? "This will delete all GitHub account links and app installations for every user. All users will need to reconnect their GitHub account."
-                  : "This will delete all Vercel account links and invalidate every active session. All users — including you — will be logged out immediately."}
+                This will delete all GitHub account links and app installations
+                for every user. All users will need to reconnect their GitHub
+                account.
               </span>
-              {revokeTarget === "vercel" && (
-                <span className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-400">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-                  You will be signed out and redirected to login after this
-                  action completes.
-                </span>
-              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

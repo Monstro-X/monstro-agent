@@ -1,5 +1,10 @@
 import "server-only";
 import { auth } from "@/lib/auth/config";
+import { getInstallationByUserAndId } from "@/lib/db/installations";
+import {
+  getConfiguredGitHubInstallation,
+  getConfiguredInstallationToken,
+} from "@/lib/github/app";
 
 /**
  * Get a valid GitHub access token for the given user.
@@ -12,18 +17,23 @@ export async function getUserGitHubToken(
     const result = await auth.api.getAccessToken({
       body: { providerId: "github", userId },
     });
-
-    return result?.accessToken ?? null;
+    if (result?.accessToken) return result.accessToken;
   } catch (error) {
-    // "Account not found" is expected when the user hasn't linked GitHub —
-    // only log unexpected errors.
     const isExpected =
       error instanceof Error && error.message === "Account not found";
     if (!isExpected) {
       console.error("Error fetching GitHub token:", error);
     }
-    return null;
   }
+
+  const configured = getConfiguredGitHubInstallation();
+  if (!configured) return null;
+
+  const installation = await getInstallationByUserAndId(
+    userId,
+    configured.installationId,
+  );
+  return installation ? getConfiguredInstallationToken() : null;
 }
 
 export async function getGitHubAppUserToken(

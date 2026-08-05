@@ -4,7 +4,7 @@ import {
   isVercelInvalidTokenError,
   listMatchingVercelProjects,
 } from "@/lib/vercel/projects";
-import { getUserVercelToken } from "@/lib/vercel/token";
+import { getVercelAccessToken } from "@/lib/vercel/token";
 
 export async function GET(req: Request) {
   const session = await getServerSession();
@@ -23,11 +23,11 @@ export async function GET(req: Request) {
     );
   }
 
-  const token = await getUserVercelToken(session.user.id);
+  const token = getVercelAccessToken();
   if (!token) {
     return Response.json(
-      { error: "Connect Vercel to load matching projects" },
-      { status: 403 },
+      { error: "Vercel service token is not configured" },
+      { status: 503 },
     );
   }
 
@@ -55,12 +55,10 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     if (isVercelInvalidTokenError(error)) {
-      console.warn(
-        `Vercel token is invalid for user ${session.user.id}; reconnect required to load repo projects.`,
-      );
+      console.warn("Vercel service token is invalid.");
       return Response.json(
-        { error: "Reconnect Vercel to load matching projects" },
-        { status: 403 },
+        { error: "Vercel service token is invalid" },
+        { status: 503 },
       );
     }
 

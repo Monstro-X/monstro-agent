@@ -15,6 +15,7 @@ let userToken: string | null;
 let githubUsername: string | null;
 let syncedInstallationsCount = 0;
 let syncError: Error | null;
+let configuredInstallationId: number | null;
 let syncErrorIsAuth = false;
 
 mock.module("@/lib/session/get-server-session", () => ({
@@ -46,6 +47,13 @@ mock.module("@/lib/github/sync", () => ({
   isGitHubInstallationsAuthError: () => syncErrorIsAuth,
 }));
 
+mock.module("@/lib/github/app", () => ({
+  getConfiguredGitHubInstallation: () =>
+    configuredInstallationId
+      ? { installationId: configuredInstallationId, accountLogin: "monstro-x" }
+      : null,
+}));
+
 const routeModulePromise = import("./route");
 
 describe("GET /api/github/connection-status", () => {
@@ -58,6 +66,7 @@ describe("GET /api/github/connection-status", () => {
     syncedInstallationsCount = 1;
     syncError = null;
     syncErrorIsAuth = false;
+    configuredInstallationId = null;
   });
 
   test("returns 401 when unauthenticated", async () => {
@@ -83,6 +92,21 @@ describe("GET /api/github/connection-status", () => {
       reason: null,
       hasInstallations: false,
       syncedInstallationsCount: 0,
+    });
+  });
+
+  test("uses the shared GitHub App installation without a linked account", async () => {
+    hasLinkedGitHub = false;
+    configuredInstallationId = 1;
+    const { GET } = await routeModulePromise;
+
+    const response = await GET();
+
+    expect(await response.json()).toEqual({
+      status: "connected",
+      reason: null,
+      hasInstallations: true,
+      syncedInstallationsCount: 1,
     });
   });
 

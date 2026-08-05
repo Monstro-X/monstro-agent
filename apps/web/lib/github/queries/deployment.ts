@@ -8,7 +8,7 @@ import {
   findLatestFailedDeploymentInspectorUrlForBranch,
   findLatestPreviewDeploymentUrlForBranch,
 } from "@/lib/vercel/projects";
-import { getUserVercelToken } from "@/lib/vercel/token";
+import { getVercelAccessToken } from "@/lib/vercel/token";
 import { getServerSession } from "@/lib/session/get-server-session";
 
 // ---- types ----
@@ -69,7 +69,7 @@ export async function getDeploymentUrl(params: {
 
   // try the Vercel API first
   if (sessionRecord.vercelProjectId && previewLookupBranch) {
-    const vercelToken = await getUserVercelToken(session.user.id);
+    const vercelToken = getVercelAccessToken();
     if (vercelToken) {
       const lookupParams = {
         token: vercelToken,
