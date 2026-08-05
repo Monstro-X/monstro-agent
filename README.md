@@ -136,6 +136,9 @@ GITHUB_WEBHOOK_SECRET=
 8. Create a GitHub App with repository permissions:
    - Contents: read and write
    - Pull requests: read and write
+   - Checks: read-only
+   - Commit statuses: read-only
+   - Issues: read-only
 9. Install the app on the Monstro GitHub organization and select only the
    repositories editors may access.
 10. Add `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`,
@@ -197,8 +200,9 @@ MONSTRO_AGENT_SSO_SECRET=... # exactly the same value
 ### GitHub App
 
 Create one GitHub App owned by Monstro, grant it **Contents** and **Pull
-requests** read/write permissions, and install it only on the repositories
-editors may access. Copy the installation ID from its settings URL:
+requests** read/write plus **Checks**, **Commit statuses**, and **Issues**
+read-only permissions, and install it only on the repositories editors may
+access. Copy the installation ID from its settings URL:
 
 ```text
 https://github.com/settings/installations/INSTALLATION_ID
