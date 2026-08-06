@@ -29,6 +29,7 @@ let runningPids = new Set<string>();
 let lastLaunchCommand: string | null = null;
 let lastLaunchCwd: string | null = null;
 let currentMtimeMs = 1_000;
+let availablePackageManagers = new Set(["bun", "pnpm", "yarn", "npm"]);
 
 function successResult(stdout = "") {
   return {
@@ -119,6 +120,13 @@ const requireOwnedSessionWithSandboxGuardMock = mock(async () => ({
   sessionRecord: currentSessionRecord,
 }));
 const execMock = mock(async (command: string) => {
+  if (command.startsWith("command -v ")) {
+    const packageManager = command.slice("command -v ".length).trim();
+    return availablePackageManagers.has(packageManager)
+      ? successResult(`/usr/bin/${packageManager}\n`)
+      : failureResult(`${packageManager}: command not found`);
+  }
+
   if (command.includes("find .")) {
     return successResult(currentFindOutput);
   }
@@ -226,6 +234,7 @@ describe("/api/sessions/[sessionId]/dev-server", () => {
     existingPaths = new Set<string>();
     pathEntries = new Map<string, MockPathEntry>();
     seedDefaultWorkspace();
+    availablePackageManagers = new Set(["bun", "pnpm", "yarn", "npm"]);
     runningPids = new Set<string>();
     lastLaunchCommand = null;
     lastLaunchCwd = null;
@@ -285,6 +294,30 @@ describe("/api/sessions/[sessionId]/dev-server", () => {
     expect(lastLaunchCommand).toContain("bun install");
     expect(lastLaunchCommand).toContain("bun run dev");
     expect(lastLaunchCommand).toContain("--hostname 0.0.0.0 --port 3000");
+  });
+
+  test("falls back to npm when the detected package manager is unavailable", async () => {
+    const { POST } = await routeModulePromise;
+    availablePackageManagers.delete("bun");
+
+    const response = await POST(
+      new Request("http://localhost/api/sessions/session-1/dev-server", {
+        method: "POST",
+      }),
+      createRouteContext(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(lastLaunchCommand).not.toBeNull();
+
+    if (!lastLaunchCommand) {
+      throw new Error("Expected execDetached to receive a launch command");
+    }
+
+    expect(lastLaunchCommand).toContain("npm install --no-package-lock");
+    expect(lastLaunchCommand).toContain("npm run dev");
+    expect(lastLaunchCommand).not.toContain("bun install");
+    expect(lastLaunchCommand).not.toContain("bun run dev");
   });
 
   test("returns the existing preview URL without relaunching when the dev server is already running", async () => {

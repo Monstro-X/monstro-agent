@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { DevServerLaunchResponse } from "@/app/api/sessions/[sessionId]/dev-server/route";
 
 export type DevServerLaunchState =
@@ -124,12 +125,12 @@ export function useDevServer({
       });
     } catch (error) {
       console.error("Failed to launch dev server:", error);
+      const message =
+        error instanceof Error ? error.message : "Failed to launch dev server";
+      toast.error(message);
       setState({
         status: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to launch dev server",
+        message,
       });
     }
   }, [ensureSandboxReady, openDevServerUrl, sessionId, state]);

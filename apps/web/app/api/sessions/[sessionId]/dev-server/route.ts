@@ -531,6 +531,23 @@ async function detectPackageManager(
   };
 }
 
+async function resolveAvailablePackageManager(
+  sandbox: ConnectedSandbox,
+  packageDirAbs: string,
+  preferredPackageManager: PackageManager,
+): Promise<PackageManager> {
+  if (preferredPackageManager === "npm") {
+    return preferredPackageManager;
+  }
+
+  const result = await sandbox.exec(
+    `command -v ${preferredPackageManager}`,
+    packageDirAbs,
+    5_000,
+  );
+  return result.success ? preferredPackageManager : "npm";
+}
+
 function getPackageManagerLockfiles(packageManager: PackageManager): string[] {
   return (
     PACKAGE_MANAGER_LOCKFILES.find((entry) => entry.manager === packageManager)
@@ -643,6 +660,7 @@ function getDevServerPidFilePath(packageDirAbs: string, port: number): string {
 
 function buildLaunchCommand(params: {
   packageManager: PackageManager;
+  installCommand: string;
   framework: DevFramework;
   port: number;
   installRootAbs: string;
@@ -658,7 +676,7 @@ function buildLaunchCommand(params: {
   const commandSteps = [`printf '%s' "$$" > ${shellQuote(params.pidFilePath)}`];
 
   if (params.installDependencies) {
-    const installCommand = INSTALL_COMMANDS[params.packageManager];
+    const installCommand = params.installCommand;
     commandSteps.push(
       params.installRootAbs === params.packageDirAbs
         ? installCommand
@@ -953,11 +971,24 @@ export async function POST(_req: Request, context: RouteContext) {
       return Response.json(buildDevServerResponse(sandbox, target));
     }
 
-    const { packageManager, installRootAbs } = await detectPackageManager(
+    const detectedPackageManager = await detectPackageManager(
       sandbox,
       packageDirAbs,
       candidate.packageManagerField,
     );
+    const packageManager = await resolveAvailablePackageManager(
+      sandbox,
+      packageDirAbs,
+      detectedPackageManager.packageManager,
+    );
+    const installRootAbs = detectedPackageManager.installRootAbs;
+    // ponytail: npm runs ordinary package.json scripts when a repo's preferred
+    // CLI is absent; use a custom snapshot for package-manager-specific scripts.
+    const installCommand =
+      packageManager === "npm" &&
+      detectedPackageManager.packageManager !== "npm"
+        ? "npm install --no-package-lock"
+        : INSTALL_COMMANDS[packageManager];
     const installDependencies = await shouldInstallDependencies({
       sandbox,
       installRootAbs,
@@ -966,6 +997,7 @@ export async function POST(_req: Request, context: RouteContext) {
     });
     const launchCommand = buildLaunchCommand({
       packageManager,
+      installCommand,
       framework: candidate.framework,
       port,
       installRootAbs,
